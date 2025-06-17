@@ -1,5 +1,5 @@
 import socket
-from utils import Modelo, HOST, PORT
+from utils_new import HOST, PORT
 
 modelo = Modelo()
 
