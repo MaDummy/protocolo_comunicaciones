@@ -20,7 +20,7 @@ def main():
                         continue
                     try:
                         paquete = json.loads(linea.strip())
-                        print(f"[{paquete['secuencia']}] -> {paquete['mensaje']}, checksum: {paquete['checksum']})")
+                        print(f"[Seq: {paquete['secuencia']}|Lon: {paquete['longitud']}|CRC: {paquete['checksum']}] -> {paquete['mensaje']}")
                         mensajeCompleto.insert(paquete['secuencia'], paquete['mensaje'])
 
                         if paquete['fin_de_paquete'] == "1":

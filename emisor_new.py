@@ -1,9 +1,7 @@
 import socket
 import json
 from time import sleep
-
-HOST = '127.0.0.1'
-PORT = 6969
+from utils_new import HOST, PORT
 
 def main():
     longitud = 8
@@ -21,6 +19,7 @@ def main():
 
             paquete = {
                 "secuencia": secuencia,
+                "longitud": longitud,
                 "mensaje": fragmento_mensaje,
                 "checksum": checksum,
                 "fin_de_paquete": fin_de_paquete
