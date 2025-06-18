@@ -1,4 +1,5 @@
 import socket
+import json
 from utils_new import HOST, PORT
 
 def main():
@@ -9,11 +10,16 @@ def main():
         conn, addr = s.accept()
         with conn:
             print(f"Conectado con {addr}")
-            while True:
-                data = conn.recv(1024)
-                if not data:
-                    break
-                paquete = data.decode('utf-8')
+            # Creamos una especie de archivo de texto a partir del socket y leemos los paquetes ahi
+            with conn.makefile("r") as f:
+                for linea in f:
+                    if not linea.strip():
+                        continue
+                    try:
+                        paquete = json.loads(linea.strip())
+                        print(f"[{paquete['secuencia']}] -> {paquete['mensaje']}, checksum: {paquete['checksum']})")
+                    except json.JSONDecodeError as e:
+                        print(f"Error al decodificar JSON: {e}")
 
 if __name__ == "__main__":
     main()

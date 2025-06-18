@@ -1,9 +1,9 @@
-from time import sleep
 import socket
 import json
+from time import sleep
 
-from utils_new import HOST, PORT
-
+HOST = '127.0.0.1'
+PORT = 6969
 
 def main():
     longitud = 8
@@ -13,25 +13,24 @@ def main():
         s.connect((HOST, PORT))
         print("Conectado al receptor")
 
-        for i in range(int(len(mensaje)/longitud)+1):
-            secuencia = i + 1 # Secuencia inicia en 1
+        for i in range(int(len(mensaje) / longitud) + 1):
+            secuencia = i
             fragmento_mensaje = mensaje[i*longitud:(i+1)*longitud]
-            checksum = 5 # Implementar
+            checksum = 5  # Por ahora fijo
             fin_de_paquete = "1" if (i+1)*longitud >= len(mensaje) else "0"
 
-            # Empaquetar el fragmento
             paquete = {
                 "secuencia": secuencia,
                 "mensaje": fragmento_mensaje,
                 "checksum": checksum,
                 "fin_de_paquete": fin_de_paquete
             }
-            json.dumps(paquete).encode()
-            s.sendall(paquete)
-            # Simular el envío del fragmento
-            sleep(0.5)
 
-        
+            # Convertir a JSON y agregar fin de linea para simular un archivo de texto
+            json_paquete = json.dumps(paquete) + "\n"
+            s.sendall(json_paquete.encode())
+
+            sleep(0.5)
 
 if __name__ == "__main__":
     main()

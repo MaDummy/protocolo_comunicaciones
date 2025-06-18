@@ -1,5 +1,6 @@
 import socket
 from utils_new import HOST, PORT
+import json
 
 modelo = Modelo()
 
@@ -16,9 +17,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             data = conn.recv(4096)
             if not data:
                 break
-
-            secuencia, mensaje = modelo.recibir(data)
-            mensaje_total += mensaje
+            data = data.decode('utf-8')
+            paquete = json.loads(data.decode())
+            print(f"mensaje recibido: {paquete["mensaje"]}")
 
     print("Señal recibida: ")
     print(mensaje_total)
