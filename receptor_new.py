@@ -17,7 +17,7 @@ def main():
                         continue
                     try:
                         paquete = json.loads(linea.strip())
-                        print(f"[{paquete['secuencia']}] -> {paquete['mensaje']}, checksum: {paquete['checksum']})")
+                        print(f"[Seq: {paquete['secuencia']}|Lon: {paquete['longitud']}|CRC: {paquete['checksum']}] -> {paquete['mensaje']}")
                     except json.JSONDecodeError as e:
                         print(f"Error al decodificar JSON: {e}")
 
