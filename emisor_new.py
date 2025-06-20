@@ -3,31 +3,60 @@ import json
 from time import sleep
 from utils_new import HOST, PORT
 
+def enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_paquete):
+    paquete = {
+        "secuencia": secuencia,
+        "longitud": longitud,
+        "mensaje": fragmento_mensaje,
+        "checksum": checksum,
+        "fin_de_paquete": fin_de_paquete
+    }
+
+    # Convertir a JSON y agregar fin de linea para simular un archivo de texto
+    json_paquete = json.dumps(paquete) + "\n"
+    s.sendall(json_paquete.encode())
+
 def main():
     longitud = 8
     mensaje = "El volcan de parangaricutirimicuaro quiere desparangaricutirimicuarizrse. Aquel que lo desparangaricutirimicuarice será un buen desparangaricutirimicuarizador."
 
+    
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
         print("Conectado al receptor")
+
+        s_file = s.makefile("r") # archivo de lectura vinculado al socket (para ACK/NACK)
 
         for i in range(int(len(mensaje) / longitud) + 1):
             secuencia = i
             fragmento_mensaje = mensaje[i*longitud:(i+1)*longitud]
             checksum = 5  # Por ahora fijo
             fin_de_paquete = "1" if (i+1)*longitud >= len(mensaje) else "0"
+            
+            # Se envía el paquete y se espera confirmación antes de seguir
+            while True:
+                enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_paquete)
 
-            paquete = {
-                "secuencia": secuencia,
-                "longitud": longitud,
-                "mensaje": fragmento_mensaje,
-                "checksum": checksum,
-                "fin_de_paquete": fin_de_paquete
-            }
+                """ VALIDANDO CONFIRMACIÓN """
 
-            # Convertir a JSON y agregar fin de linea para simular un archivo de texto
-            json_paquete = json.dumps(paquete) + "\n"
-            s.sendall(json_paquete.encode())
+                # Leer la respuesta del receptor
+                respuesta = s_file.readline()
+
+                if not respuesta:
+                    print("no se recibió confirmación")
+                    break # hay que decidir que hacer en este caso creo..
+                try:
+                    confirmacion = json.loads(respuesta.strip())
+                    print(f"[estado: {confirmacion['tipo']} | secuencia: {confirmacion['secuencia']}]")
+
+                    if confirmacion["tipo"] == "ACK":
+                        break  # Se sigue enviando paquetes
+                    elif confirmacion["tipo"] == "NAK":
+                        print("Reenviando... secuencia:", confirmacion["secuencia"])
+
+                except json.JSONDecodeError as e:
+                    print(f"Error al decodificar JSON: {e}")
+
 
             sleep(0.5)
 
