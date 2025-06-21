@@ -1,6 +1,9 @@
 import socket
 import json
+import sys
+import os
 from utils_new import HOST, PORT
+from traduccion import guardar
 
 mensajeCompleto = []
 
@@ -14,6 +17,15 @@ def enviar_confirmacion(conn, secuencia, estado):
 
 # Envío de un mensaje largo a través de paquetes y reconstrucción del mensaje
 def main():
+    # Verifica que el codigo se este ejecutando correctamente
+    if len(sys.argv) != 2:
+        print("Uso: python receptor.py archivo_salida.ext")
+        sys.exit(1)
+
+    nombre_destino = sys.argv[1]
+    extension = os.path.splitext(nombre_destino)[1].lower().replace(".", "")
+
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         s.listen()
@@ -40,6 +52,9 @@ def main():
                         # Se imprime el mensaje completo si se recibió el mensaje final
                         if paquete['fin_de_paquete'] == "1":
                             print("listo!\n")
+                            mensaje_total = "".join(mensajeCompleto)
+                            guardar(mensaje_total, extension, nombre_destino)
+                            print(f"Archivo guardado exitosamente en '{nombre_destino}'")
                             for elem in mensajeCompleto:
                                 print(elem, end="")
 

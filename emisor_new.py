@@ -1,7 +1,10 @@
 import socket
 import json
+import sys
+import os
 from time import sleep
 from utils_new import HOST, PORT
+from traduccion import leer
 
 def enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_paquete):
     paquete = {
@@ -17,8 +20,23 @@ def enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_p
     s.sendall(json_paquete.encode())
 
 def main():
+    # Verifica que el codigo se este ejecutando correctamente
+    if len(sys.argv) != 2:
+        print("Uso: python emisor_new.py nombre_archivo.ext")
+        sys.exit(1)
+
+    ruta_archivo = sys.argv[1]
+    extension = os.path.splitext(ruta_archivo)[1].lower().replace('.', '')
+
+    try:
+        mensaje = leer(ruta_archivo, extension)
+    except Exception as e:
+        print(f"Error al leer archivo: {e}")
+        sys.exit(1)
+
     longitud = 8
-    mensaje = "El volcan de parangaricutirimicuaro quiere desparangaricutirimicuarizrse. Aquel que lo desparangaricutirimicuarice será un buen desparangaricutirimicuarizador."
+    mensaje = "El volcan de parangaricutirimicuaro quiere desparangaricutirimicuarizrse. " \
+    "Aquel que lo desparangaricutirimicuarice será un buen desparangaricutirimicuarizador."
 
     
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
