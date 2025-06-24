@@ -85,7 +85,6 @@ def main():
                     print(f"Error al decodificar JSON: {e}")
 
 
-            sleep(0.5)
-
+            
 if __name__ == "__main__":
     main()

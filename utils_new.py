@@ -1,4 +1,6 @@
 import base64
+import random
+
 
 HOST = '127.0.0.1'
 PORT = 6969
@@ -29,3 +31,14 @@ def guardar(contenido_string, extension, nombre_destino):
         binario = base64.b64decode(contenido_string.encode("utf-8"))
         with open(nombre_destino, "wb") as f:
             f.write(binario)
+
+def anade_ruido(datos, probabilidad=0.05):
+    """Añade ruido a los datos con una probabilidad dada."""
+    datos_ruidosos = []
+    for bit in datos:
+        if random.random() < probabilidad:
+            # Cambiar el bit (0 a 1 o 1 a 0)
+            datos_ruidosos.append(1 - bit)
+        else:
+            datos_ruidosos.append(bit)
+    return datos_ruidosos

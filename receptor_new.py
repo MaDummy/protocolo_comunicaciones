@@ -56,6 +56,7 @@ def main():
                         mensaje_codificado = base64.b64decode(paquete['mensaje'])
                         if paquete['checksum'] == crc16(mensaje_codificado):
                             mensaje_descifrado = descrifrar_cesar_general(mensaje_codificado)
+                            mensaje_descifrado = base64.b64decode(mensaje_descifrado)
                             mensajeCompleto.insert(paquete['secuencia'], mensaje_descifrado.decode('utf-8'))
                             enviar_confirmacion(conn, paquete['secuencia'], "ACK")
                         else:
