@@ -2,9 +2,17 @@ import socket
 import json
 import sys
 import os
+import crcmod
 from time import sleep
 from utils_new import HOST, PORT
 from traduccion import leer
+
+
+crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
+
+CLAVE = 10
+
+
 
 def enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_paquete):
     paquete = {
@@ -18,6 +26,12 @@ def enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_p
     # Convertir a JSON y agregar fin de linea para simular un archivo de texto
     json_paquete = json.dumps(paquete) + "\n"
     s.sendall(json_paquete.encode())
+
+def cesar_general(data):
+    resultado = bytearray()
+    for b in data:
+        resultado.append((b + CLAVE) % 256)
+    return bytes(resultado)
 
 def main():
     # Verifica que el codigo se este ejecutando correctamente
@@ -48,7 +62,8 @@ def main():
         for i in range(int(len(mensaje) / longitud) + 1):
             secuencia = i
             fragmento_mensaje = mensaje[i*longitud:(i+1)*longitud]
-            checksum = 5  # Por ahora fijo
+            fragmento_mensaje = cesar_general(fragmento_mensaje)
+            checksum = crc16(fragmento_mensaje)  # Por ahora fijo
             fin_de_paquete = "1" if (i+1)*longitud >= len(mensaje) else "0"
             
             # Se envía el paquete y se espera confirmación antes de seguir

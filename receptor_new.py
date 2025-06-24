@@ -2,10 +2,22 @@ import socket
 import json
 import sys
 import os
+import crcmod
 from utils_new import HOST, PORT
 from traduccion import guardar
 
 mensajeCompleto = []
+
+crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
+
+CLAVE = 10
+
+
+def decesar_general(data):
+    resultado = bytearray()
+    for b in data:
+        resultado.append((b - CLAVE) % 256)
+    return bytes(resultado)
 
 def enviar_confirmacion(conn, secuencia, estado):
     # estado es "ACK" o "NAK"
@@ -42,10 +54,11 @@ def main():
                         paquete = json.loads(linea.strip())
                         print(f"[Seq: {paquete['secuencia']}| Lon: {paquete['longitud']}| CRC: {paquete['checksum']}] -> {paquete['mensaje']}")
 
-                        mensajeCompleto.insert(paquete['secuencia'], paquete['mensaje'])
+                        
 
                         # Aquí dependiendo de si el checksum es correcto o no, enviamos ACK o NAK
-                        if paquete['checksum'] == 5:
+                        if paquete['checksum'] == crc16(paquete['mensaje']):
+                            mensajeCompleto.insert(paquete['secuencia'], decesar_general(paquete['mensaje']).decode('utf-8'))
                             enviar_confirmacion(conn, paquete['secuencia'], "ACK")
                         else:
                             enviar_confirmacion(conn, paquete['secuencia'], "NAK")
