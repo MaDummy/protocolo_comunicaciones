@@ -4,7 +4,7 @@ import json
 import sys
 import os
 import crcmod
-from utils_new import HOST, PORT, CLAVE_CESAR, guardar
+from utils_new import HOST, PORT, CLAVE_CESAR, guardar, base64
 
 mensajeCompleto = []
 
@@ -53,8 +53,10 @@ def main():
                         paquete = json.loads(linea.strip())
                         print(f"[Seq: {paquete['secuencia']}| Lon: {paquete['longitud']}| CRC: {paquete['checksum']}] -> {paquete['mensaje']}")
                         # Aquí dependiendo de si el checksum es correcto o no, enviamos ACK o NAK
-                        if paquete['checksum'] == crc16(paquete['mensaje']):
-                            mensajeCompleto.insert(paquete['secuencia'], descrifrar_cesar_general(paquete['mensaje']).decode('utf-8'))
+                        mensaje_codificado = base64.b64decode(paquete['mensaje'])
+                        if paquete['checksum'] == crc16(mensaje_codificado):
+                            mensaje_descifrado = descrifrar_cesar_general(mensaje_codificado)
+                            mensajeCompleto.insert(paquete['secuencia'], mensaje_descifrado.decode('utf-8'))
                             enviar_confirmacion(conn, paquete['secuencia'], "ACK")
                         else:
                             enviar_confirmacion(conn, paquete['secuencia'], "NAK")

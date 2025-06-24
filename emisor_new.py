@@ -5,14 +5,14 @@ import sys
 import os
 import crcmod
 from time import sleep
-from utils_new import HOST, PORT, leer, CLAVE_CESAR
+from utils_new import HOST, PORT, leer, CLAVE_CESAR, base64
 
 crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
 
 def enviar_paquete(s, secuencia, longitud_mensaje, fragmento_mensaje, checksum, fin_de_paquete):
     paquete = {
         "secuencia": secuencia,
-        "longitud_mensaje": longitud_mensaje,
+        "longitud": longitud_mensaje,
         "mensaje": fragmento_mensaje,
         "checksum": checksum,
         "fin_de_paquete": fin_de_paquete
@@ -44,9 +44,6 @@ def main():
         sys.exit(1)
 
     longitud_mensaje = 8
-    mensaje = "El volcan de parangaricutirimicuaro quiere desparangaricutirimicuarizrse. " \
-    "Aquel que lo desparangaricutirimicuarice será un buen desparangaricutirimicuarizador."
-
     
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
@@ -56,14 +53,16 @@ def main():
 
         for i in range(int(len(mensaje) / longitud_mensaje) + 1):
             secuencia = i
-            fragmento_mensaje = mensaje[i*longitud_mensaje:(i+1)*longitud_mensaje]
-            fragmento_mensaje = cesar_general(fragmento_mensaje)
-            checksum = crc16(fragmento_mensaje)  # Por ahora fijo
+            fragmento_bytes = mensaje[i*longitud_mensaje:(i+1)*longitud_mensaje].encode('utf-8') # Paso 1: convertir a bytes
+            fragmento_base64 = base64.b64encode(fragmento_bytes) # Paso 2: codificar a base64
+            fragmento_cifrado = cesar_general(fragmento_base64) # Paso 3: cifrar con César
+            checksum = crc16(fragmento_cifrado) # Paso 4: calcular checksum
+            fragmento_a_enviar = base64.b64encode(fragmento_cifrado).decode('utf-8') # Paso 5: codificar a base64 para enviar
             fin_de_paquete = "1" if (i+1)*longitud_mensaje >= len(mensaje) else "0"
             
             # Se envía el paquete y se espera confirmación antes de seguir
             while True:
-                enviar_paquete(s, secuencia, longitud_mensaje, fragmento_mensaje, checksum, fin_de_paquete)
+                enviar_paquete(s, secuencia, longitud_mensaje, fragmento_a_enviar, checksum, fin_de_paquete)
 
                 """ VALIDANDO CONFIRMACIÓN """
 
