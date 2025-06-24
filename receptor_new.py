@@ -1,28 +1,27 @@
+#!/usr/bin/env python3
 import socket
 import json
 import sys
 import os
 import crcmod
-from utils_new import HOST, PORT
-from traduccion import guardar
+from utils_new import HOST, PORT, CLAVE_CESAR, guardar
 
 mensajeCompleto = []
 
 crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
 
-CLAVE = 10
 
-
-def decesar_general(data):
+def descrifrar_cesar_general(data):
+    """Descrifra un mensaje usando el cifrado César con una clave fija."""
     resultado = bytearray()
     for b in data:
-        resultado.append((b - CLAVE) % 256)
+        resultado.append((b - CLAVE_CESAR) % 256)
     return bytes(resultado)
 
 def enviar_confirmacion(conn, secuencia, estado):
-    # estado es "ACK" o "NAK"
+    """Envia una confirmación al receptor indicando si el paquete fue recibido correctamente o no."""
     confirmacion = json.dumps({
-        "tipo": estado,
+        "tipo": estado, # ACK o NAK
         "secuencia": secuencia
     }) + "\n" # Salto de linea para delimitar el mensaje
     conn.sendall(confirmacion.encode())
@@ -31,7 +30,7 @@ def enviar_confirmacion(conn, secuencia, estado):
 def main():
     # Verifica que el codigo se este ejecutando correctamente
     if len(sys.argv) != 2:
-        print("Uso: python receptor.py archivo_salida.ext")
+        print("Uso: python receptor.py <archivo_salida.ext>")
         sys.exit(1)
 
     nombre_destino = sys.argv[1]
@@ -53,12 +52,9 @@ def main():
                     try:
                         paquete = json.loads(linea.strip())
                         print(f"[Seq: {paquete['secuencia']}| Lon: {paquete['longitud']}| CRC: {paquete['checksum']}] -> {paquete['mensaje']}")
-
-                        
-
                         # Aquí dependiendo de si el checksum es correcto o no, enviamos ACK o NAK
                         if paquete['checksum'] == crc16(paquete['mensaje']):
-                            mensajeCompleto.insert(paquete['secuencia'], decesar_general(paquete['mensaje']).decode('utf-8'))
+                            mensajeCompleto.insert(paquete['secuencia'], descrifrar_cesar_general(paquete['mensaje']).decode('utf-8'))
                             enviar_confirmacion(conn, paquete['secuencia'], "ACK")
                         else:
                             enviar_confirmacion(conn, paquete['secuencia'], "NAK")

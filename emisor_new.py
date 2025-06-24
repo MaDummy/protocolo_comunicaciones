@@ -1,23 +1,18 @@
+#!/usr/bin/env python3
 import socket
 import json
 import sys
 import os
 import crcmod
 from time import sleep
-from utils_new import HOST, PORT
-from traduccion import leer
-
+from utils_new import HOST, PORT, leer, CLAVE_CESAR
 
 crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
 
-CLAVE = 10
-
-
-
-def enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_paquete):
+def enviar_paquete(s, secuencia, longitud_mensaje, fragmento_mensaje, checksum, fin_de_paquete):
     paquete = {
         "secuencia": secuencia,
-        "longitud": longitud,
+        "longitud_mensaje": longitud_mensaje,
         "mensaje": fragmento_mensaje,
         "checksum": checksum,
         "fin_de_paquete": fin_de_paquete
@@ -30,13 +25,13 @@ def enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_p
 def cesar_general(data):
     resultado = bytearray()
     for b in data:
-        resultado.append((b + CLAVE) % 256)
+        resultado.append((b + CLAVE_CESAR) % 256)
     return bytes(resultado)
 
 def main():
     # Verifica que el codigo se este ejecutando correctamente
     if len(sys.argv) != 2:
-        print("Uso: python emisor_new.py nombre_archivo.ext")
+        print("Uso: python emisor_new.py <nombre_archivo.ext>")
         sys.exit(1)
 
     ruta_archivo = sys.argv[1]
@@ -48,7 +43,7 @@ def main():
         print(f"Error al leer archivo: {e}")
         sys.exit(1)
 
-    longitud = 8
+    longitud_mensaje = 8
     mensaje = "El volcan de parangaricutirimicuaro quiere desparangaricutirimicuarizrse. " \
     "Aquel que lo desparangaricutirimicuarice será un buen desparangaricutirimicuarizador."
 
@@ -59,16 +54,16 @@ def main():
 
         s_file = s.makefile("r") # archivo de lectura vinculado al socket (para ACK/NACK)
 
-        for i in range(int(len(mensaje) / longitud) + 1):
+        for i in range(int(len(mensaje) / longitud_mensaje) + 1):
             secuencia = i
-            fragmento_mensaje = mensaje[i*longitud:(i+1)*longitud]
+            fragmento_mensaje = mensaje[i*longitud_mensaje:(i+1)*longitud_mensaje]
             fragmento_mensaje = cesar_general(fragmento_mensaje)
             checksum = crc16(fragmento_mensaje)  # Por ahora fijo
-            fin_de_paquete = "1" if (i+1)*longitud >= len(mensaje) else "0"
+            fin_de_paquete = "1" if (i+1)*longitud_mensaje >= len(mensaje) else "0"
             
             # Se envía el paquete y se espera confirmación antes de seguir
             while True:
-                enviar_paquete(s, secuencia, longitud, fragmento_mensaje, checksum, fin_de_paquete)
+                enviar_paquete(s, secuencia, longitud_mensaje, fragmento_mensaje, checksum, fin_de_paquete)
 
                 """ VALIDANDO CONFIRMACIÓN """
 
