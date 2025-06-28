@@ -1,14 +1,14 @@
 import base64
-import random
+import crcmod
 
 
 HOST = '127.0.0.1'
 PORT = 6968
 EXTENSIONES_TEXTO = {"txt", "csv", "json", "xml", "html"}
-
 CLAVE_CESAR = 10
-
 PROBABILIDAD_ERROR_CHECKSUM = 0.1
+
+crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
 
 def leer(nombre_archivo, extension):
     if extension.lower() in EXTENSIONES_TEXTO:
@@ -34,7 +34,12 @@ def guardar(contenido_string, extension, nombre_destino):
         with open(nombre_destino, "wb") as f:
             f.write(binario)
 
-def anade_ruido(checksum, probabilidad):
-    if random.random() < probabilidad:
-        return checksum + 1
-    return checksum
+def cesar_general(data, cifrado=True):
+    resultado = bytearray()
+    for b in data:
+        if cifrado:
+            resultado.append((b + CLAVE_CESAR) % 256)
+        else:
+            resultado.append((b - CLAVE_CESAR) % 256)
+    return bytes(resultado)
+

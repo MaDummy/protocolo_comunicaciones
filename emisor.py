@@ -1,32 +1,10 @@
 #!/usr/bin/env python3
 import socket
-import json
 import sys
 import os
-import crcmod
 from time import sleep
-from utils_new import HOST, PORT, leer, CLAVE_CESAR, PROBABILIDAD_ERROR_CHECKSUM, base64, anade_ruido
-
-crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
-
-def enviar_paquete(s, secuencia, longitud_mensaje, fragmento_mensaje, checksum, fin_de_paquete):
-    paquete = {
-        "secuencia": secuencia,
-        "longitud": longitud_mensaje,
-        "mensaje": fragmento_mensaje,
-        "checksum": checksum,
-        "fin_de_paquete": fin_de_paquete
-    }
-
-    # Convertir a JSON y agregar fin de linea para simular un archivo de texto
-    json_paquete = json.dumps(paquete) + "\n"
-    s.sendall(json_paquete.encode())
-
-def cesar_general(data):
-    resultado = bytearray()
-    for b in data:
-        resultado.append((b + CLAVE_CESAR) % 256)
-    return bytes(resultado)
+from utils import HOST, PORT, leer, base64, cesar_general, crc16
+from utils_emisor import MAX_REINTENTOS, enviar_paquete, esperar_confirmacion_con_timeout
 
 def main():
     # Verifica que el codigo se este ejecutando correctamente
@@ -54,37 +32,47 @@ def main():
         for i in range(int(len(mensaje) / longitud_mensaje) + 1):
             secuencia = i
             fragmento_bytes = mensaje[i*longitud_mensaje:(i+1)*longitud_mensaje].encode('utf-8') # Paso 1: convertir a bytes
+            
+            # Saltar fragmentos vacíos
+            if not fragmento_bytes:
+                continue
+                
             fragmento_base64 = base64.b64encode(fragmento_bytes) # Paso 2: codificar a base64
             fragmento_cifrado = cesar_general(fragmento_base64) # Paso 3: cifrar con César
             checksum = crc16(fragmento_cifrado) # Paso 4: calcular checksum
             fragmento_a_enviar = base64.b64encode(fragmento_cifrado).decode('utf-8') # Paso 5: codificar a base64 para enviar
             fin_de_paquete = "1" if (i+1)*longitud_mensaje >= len(mensaje) else "0"
             
-            # Se envía el paquete y se espera confirmación antes de seguir
-            while True:
-                enviar_paquete(s, secuencia, longitud_mensaje, fragmento_a_enviar, checksum, fin_de_paquete)
-
-                """ VALIDANDO CONFIRMACIÓN """
-
-                # Leer la respuesta del receptor
-                respuesta = s_file.readline()
-
-                if not respuesta:
-                    print("no se recibió confirmación")
-                    break # hay que decidir que hacer en este caso creo..
-                try:
-                    confirmacion = json.loads(respuesta.strip())
-                    print(f"[estado: {confirmacion['tipo']} | secuencia: {confirmacion['secuencia']}]")
-
-                    if confirmacion["tipo"] == "ACK":
-                        break  # Se sigue enviando paquetes
-                    elif confirmacion["tipo"] == "NAK":
-                        print("Reenviando... secuencia:", confirmacion["secuencia"])
-
-                except json.JSONDecodeError as e:
-                    print(f"Error al decodificar JSON: {e}")
-
-
+            # Intentar enviar el paquete con reintentos
+            reintentos = 0
+            enviado_exitosamente = False
             
+            while reintentos < MAX_REINTENTOS and not enviado_exitosamente:
+                try:
+                    enviar_paquete(s, secuencia, longitud_mensaje, fragmento_a_enviar, checksum, fin_de_paquete)
+                    
+                    # Esperar confirmación con timeout
+                    ack_recibido, confirmacion = esperar_confirmacion_con_timeout(s, s_file, secuencia)
+                    
+                    if ack_recibido:
+                        print(f"Paquete {secuencia} enviado exitosamente")
+                        enviado_exitosamente = True
+                    else:
+                        reintentos += 1
+                        if reintentos < MAX_REINTENTOS:
+                            print(f"Reintento {reintentos}/{MAX_REINTENTOS} para secuencia {secuencia}")
+                        else:
+                            print(f"Se agotaron los reintentos para secuencia {secuencia}")
+                            
+                except Exception as e:
+                    print(f"Error enviando paquete {secuencia}: {e}")
+                    reintentos += 1
+            
+            if not enviado_exitosamente:
+                print(f"Falló el envío del paquete {secuencia} después de {MAX_REINTENTOS} intentos")
+                break
+
+        print("Transmisión completada :3")
+
 if __name__ == "__main__":
     main()
