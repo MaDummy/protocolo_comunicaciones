@@ -3,7 +3,7 @@ import socket
 import sys
 import os
 from time import sleep
-from utils import HOST, PORT, leer, base64, cesar_general, crc16
+from utils import HOST, PORT, PROBABILIDAD_ERROR_CHECKSUM_CONFIRMACION, leer, base64, cesar_general, crc16, anade_ruido
 from utils_emisor import MAX_REINTENTOS, enviar_paquete, esperar_confirmacion_con_timeout
 
 def main():
@@ -52,7 +52,7 @@ def main():
                     enviar_paquete(s, secuencia, longitud_mensaje, fragmento_a_enviar, checksum, fin_de_paquete)
                     
                     # Esperar confirmación con timeout
-                    ack_recibido, confirmacion = esperar_confirmacion_con_timeout(s, s_file, secuencia)
+                    ack_recibido, confirmacion = esperar_confirmacion_con_timeout(s, s_file, secuencia, PROBABILIDAD_ERROR_CHECKSUM_CONFIRMACION)
                     
                     if ack_recibido:
                         print(f"Paquete {secuencia} enviado exitosamente")

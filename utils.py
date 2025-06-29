@@ -1,12 +1,15 @@
 import base64
 import crcmod
+from random import random
 
 
 HOST = '127.0.0.1'
-PORT = 6968
+PORT = 6975
 EXTENSIONES_TEXTO = {"txt", "csv", "json", "xml", "html"}
 CLAVE_CESAR = 10
-PROBABILIDAD_ERROR_CHECKSUM = 0.1
+PROBABILIDAD_ERROR_CHECKSUM_MENSAJE = 0.3
+PROBABILIDAD_ERROR_CHECKSUM_CONFIRMACION = 0.0
+PROBABILIDAD_PAQUETE_PERDIDO = 0.0
 
 crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
 
@@ -42,4 +45,9 @@ def cesar_general(data, cifrado=True):
         else:
             resultado.append((b - CLAVE_CESAR) % 256)
     return bytes(resultado)
+
+def anade_ruido(checksum, probabilidad):
+    if random() < probabilidad:
+        return checksum + 1
+    return checksum
 

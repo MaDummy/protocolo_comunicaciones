@@ -1,5 +1,6 @@
 import json
 import select
+from utils import crc16, base64, anade_ruido
 
 # Configuración de timeout
 TIMEOUT_SEGUNDOS = 0.5
@@ -19,7 +20,7 @@ def enviar_paquete(s, secuencia, longitud_mensaje, fragmento_mensaje, checksum, 
     s.sendall(json_paquete.encode())
     print(f"→ Enviado paquete secuencia {secuencia}")
 
-def esperar_confirmacion_con_timeout(s, s_file, secuencia_esperada):
+def esperar_confirmacion_con_timeout(s, s_file, secuencia_esperada, prob_confirmacion_corrupta):
     """
     Espera confirmación con timeout y valida que sea para la secuencia correcta
     Returns: (True, confirmacion) si recibe ACK correcto, (False, None) si debe reenviar
@@ -42,6 +43,13 @@ def esperar_confirmacion_con_timeout(s, s_file, secuencia_esperada):
         try:
             confirmacion = json.loads(respuesta.strip())
             print(f"← Recibido: {confirmacion['tipo']} para secuencia {confirmacion['secuencia']}")
+
+            # Validar que la confirmacion no se haya corrompido
+            tipo_encoded = confirmacion['tipo'].encode('utf-8')
+            checksum = anade_ruido(confirmacion['checksum'], prob_confirmacion_corrupta)
+            if checksum != crc16(base64.b64encode(tipo_encoded)):
+                print("Mensaje de confirmacion corrupto, enviando mensaje de nuevo")
+                return False, None
             
             # Validar que la confirmación sea para la secuencia correcta
             if confirmacion['secuencia'] != secuencia_esperada:

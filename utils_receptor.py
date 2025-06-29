@@ -1,11 +1,15 @@
 import json
 from random import random
+from utils import crc16, base64
 
 def enviar_confirmacion(conn, secuencia, estado):
     """Envia una confirmación al receptor indicando si el paquete fue recibido correctamente o no."""
+    estado_encoded = estado.encode('utf-8')
+    checksum = crc16(base64.b64encode(estado_encoded))
     confirmacion = json.dumps({
         "tipo": estado, # ACK o NAK
-        "secuencia": secuencia
+        "secuencia": secuencia,
+        "checksum": checksum
     }) + "\n" # Salto de linea para delimitar el mensaje
     conn.sendall(confirmacion.encode())
     print(f"→ Enviado {estado} para secuencia {secuencia}")
@@ -34,8 +38,3 @@ def pierde_paquete(contador, probabilidad):
         return True
     return False
 
-
-def anade_ruido(checksum, probabilidad):
-    if random() < probabilidad:
-        return checksum + 1
-    return checksum
