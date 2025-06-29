@@ -21,16 +21,16 @@ def procesar_paquete(paquete, conn, ultima_secuencia_recibida, paquetes_recibido
     print(f"← Recibido paquete [Seq: {secuencia}| Lon: {paquete['longitud']}| CRC: {paquete['checksum']}]")
     
     # Verificar si es un paquete duplicado
-    if es_paquete_duplicado(secuencia, ultima_secuencia_recibida, paquetes_recibidos):
+    """if es_paquete_duplicado(secuencia, ultima_secuencia_recibida, paquetes_recibidos):
         print(f"Paquete duplicado detectado (secuencia {secuencia}) - Enviando ACK nuevamente")
         enviar_confirmacion(conn, secuencia, "ACK")
         return ultima_secuencia_recibida, contador_errores_checksum, False
-    
+    """
     # Verificar si es la secuencia esperada
     if not es_secuencia_esperada(secuencia, ultima_secuencia_recibida):
         print(f"  Secuencia fuera de orden. Esperada: {ultima_secuencia_recibida + 1}, Recibida: {secuencia}")
         # Enviar NAK para la secuencia esperada
-        enviar_confirmacion(conn, ultima_secuencia_recibida + 1, "NAK")
+        enviar_confirmacion(conn, ultima_secuencia_recibida, "ACK")
         return ultima_secuencia_recibida, contador_errores_checksum, False
     
     # Validar checksum
@@ -58,7 +58,7 @@ def procesar_paquete(paquete, conn, ultima_secuencia_recibida, paquetes_recibido
         else:
             # Checksum incorrecto
             print(f"Error de checksum en paquete {secuencia}")
-            enviar_confirmacion(conn, secuencia, "NAK")
+            enviar_confirmacion(conn, ultima_secuencia_recibida, "ACK")
             return ultima_secuencia_recibida, contador_errores_checksum + 1, False
             
     except Exception as e:
@@ -118,17 +118,18 @@ def main():
                         continue
                         
                     try:
-                        paquete = json.loads(linea.strip()) if not pierde_paquete(paquetes_perdidos, PROBABILIDAD_PAQUETE_PERDIDO) else {} # Probabilidad de perder el paquete
-                        # Procesar el paquete
-                        ultima_secuencia_recibida, contador_errores_checksum, es_final = procesar_paquete(
-                            paquete, conn, ultima_secuencia_recibida, 
-                            paquetes_recibidos, contador_errores_checksum
-                        )
-                        # Si es el paquete final, terminar la recepción
-                        if es_final:
-                            paquete_final_recibido = True
-                            print("Recepción completada!")
-                            break
+                        if not pierde_paquete(paquetes_perdidos, PROBABILIDAD_PAQUETE_PERDIDO):
+                            paquete = json.loads(linea.strip())  # Probabilidad de perder el paquete
+                            # Procesar el paquete
+                            ultima_secuencia_recibida, contador_errores_checksum, es_final = procesar_paquete(
+                                paquete, conn, ultima_secuencia_recibida, 
+                                paquetes_recibidos, contador_errores_checksum
+                            )
+                            # Si es el paquete final, terminar la recepción
+                            if es_final:
+                                paquete_final_recibido = True
+                                print("Recepción completada!")
+                                break
                             
                     except json.JSONDecodeError as e:
                         print(f"Error al decodificar JSON: {e}")
